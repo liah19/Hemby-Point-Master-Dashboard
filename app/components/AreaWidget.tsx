@@ -93,115 +93,183 @@ export default function AreaWidget({ areaName, data, onUpdate }: AreaWidgetProps
   }
 
   if (areaName === 'Fitness & Health') {
-    const workout = localData.workoutType || 'Strength Training';
-    const countdownEvent = localData.countdownEvent || 'Sanctuary 5k Run';
-    const countdownDate = localData.countdownDate || '2026-09-01';
-    const target = localData.weeklyTarget || 4;
-    const consistency = localData.consistency || [true, false, false, false, false, false, false];
+    const activities = localData.activities || [];
+    const newActivityName = localData.newActivityName || '';
+    const eventName = localData.countdownEvent || '';
+    const eventDate = localData.countdownDate || '';
 
-    // Compute remaining days
-    const daysLeft = Math.max(0, Math.ceil((new Date(countdownDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const daysLeft = eventDate
+      ? Math.max(0, Math.ceil((new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : null;
 
-    const daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const addActivity = () => {
+      if (!newActivityName.trim()) return;
+      const newActivity = {
+        id: Date.now().toString(),
+        name: newActivityName.trim(),
+        targetDays: [],
+        log: [],
+      };
+      triggerSave({ ...localData, activities: [...activities, newActivity], newActivityName: '' });
+    };
+
+    const removeActivity = (id: string) => {
+      triggerSave({ ...localData, activities: activities.filter((a: any) => a.id !== id) });
+    };
+
+    const toggleTargetDay = (activityId: string, day: string) => {
+      const next = activities.map((a: any) => {
+        if (a.id !== activityId) return a;
+        const targetDays = a.targetDays.includes(day)
+          ? a.targetDays.filter((d: string) => d !== day)
+          : [...a.targetDays, day];
+        return { ...a, targetDays };
+      });
+      triggerSave({ ...localData, activities: next });
+    };
+
+    const logActivity = (activityId: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      const next = activities.map((a: any) =>
+        a.id === activityId ? { ...a, log: [{ date: today }, ...a.log] } : a
+      );
+      triggerSave({ ...localData, activities: next });
+    };
+
+    const deleteLogEntry = (activityId: string, logIdx: number) => {
+      const next = activities.map((a: any) => {
+        if (a.id !== activityId) return a;
+        return { ...a, log: a.log.filter((_: any, i: number) => i !== logIdx) };
+      });
+      triggerSave({ ...localData, activities: next });
+    };
 
     return (
-      <div className="bg-white border border-border-soft p-6 md:p-8 rounded-[32px] shadow-soft text-left space-y-6">
-        <div>
-          <span className="text-rose font-mono uppercase tracking-wider text-xs font-bold">Fitness & Health</span>
-          <h3 className="text-2xl font-serif text-navy font-bold mt-1">Core Vitality & Recovery</h3>
+      <div className="space-y-6">
+        {/* Optional Event Countdown — only shows meaningfully once a name/date is set */}
+        <div className="bg-white border border-border-soft rounded-[32px] shadow-soft p-6 md:p-8">
+          <span className="text-rose font-mono uppercase tracking-wider text-xs font-bold">Goal Event (Optional)</span>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mt-2">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={eventName}
+                onChange={(e) => setLocalData({ ...localData, countdownEvent: e.target.value })}
+                onBlur={() => triggerSave(localData)}
+                placeholder="e.g. My first 5K, a triathlon, a hiking trip..."
+                className="w-full text-xl font-serif font-bold text-navy bg-transparent border-0 border-b border-dashed border-rose/20 focus:border-rose focus:outline-none"
+              />
+              <input
+                type="date"
+                value={eventDate}
+                onChange={(e) => triggerSave({ ...localData, countdownDate: e.target.value })}
+                className="text-xs text-[#6E6A62] mt-2 bg-transparent border-0 focus:outline-none"
+              />
+            </div>
+            {daysLeft !== null && eventName && (
+              <div className="flex flex-col items-center justify-center h-28 w-28 rounded-full border-4 border-rose-bg/20 shrink-0 mx-auto md:mx-0">
+                <span className="text-3xl font-serif font-extrabold text-rose">{daysLeft}</span>
+                <span className="text-[9px] font-mono text-[#A19D94] uppercase tracking-wider">Days Left</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-mono uppercase text-[#6E6A62] mb-1.5">Active Target Focus</label>
-              <select
-                value={workout}
-                onChange={(e) => setLocalData({ ...localData, workoutType: e.target.value })}
-                className="w-full px-4 py-2.5 bg-canvas border border-border-soft rounded-xl text-sm focus:outline-none focus:border-rose text-navy"
-              >
-                <option value="Strength Training">Strength Training</option>
-                <option value="Cardio Run">Cardio / Run</option>
-                <option value="Yoga & Meditation">Yoga & Stillness</option>
-                <option value="Active Recovery / Walk">Active Recovery / Walk</option>
-                <option value="HIIT Circuit">HIIT Circuit</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono uppercase text-[#6E6A62] mb-1.5">Weekly Target Workouts</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="range"
-                  min="1"
-                  max="7"
-                  value={target}
-                  onChange={(e) => setLocalData({ ...localData, weeklyTarget: parseInt(e.target.value) })}
-                  className="w-full accent-rose"
-                />
-                <span className="text-sm font-bold font-serif text-rose w-12 text-right">{target} days</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono uppercase text-[#6E6A62] mb-2">Weekly consistency</label>
-              <div className="flex gap-2">
-                {daysOfWeek.map((day, idx) => {
-                  const active = consistency[idx];
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        const nextCons = [...consistency];
-                        nextCons[idx] = !nextCons[idx];
-                        setLocalData({ ...localData, consistency: nextCons });
-                      }}
-                      className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border cursor-pointer transition-colors ${
-                        active 
-                          ? 'bg-rose-bg text-white border-rose-bg font-bold' 
-                          : 'bg-canvas text-[#A19D94] border-border-soft hover:border-rose/30'
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Countdown timer */}
-          <div className="bg-canvas p-6 rounded-[24px] border border-border-soft shadow-soft flex flex-col justify-center items-center text-center">
-            <span className="text-rose font-mono text-[10px] uppercase tracking-wider font-bold">Sanctuary Target Event</span>
+        {/* Add New Activity */}
+        <div className="bg-white border border-border-soft rounded-[28px] shadow-soft p-5">
+          <span className="text-rose font-mono uppercase tracking-wider text-[10px] font-bold">Your Activities</span>
+          <p className="text-xs text-[#6E6A62] mt-1 mb-3">
+            Add whatever you actually do — running, yoga, weight training, swimming, dance class, anything.
+          </p>
+          <div className="flex gap-2">
             <input
               type="text"
-              value={countdownEvent}
-              onChange={(e) => setLocalData({ ...localData, countdownEvent: e.target.value })}
-              className="text-lg font-serif font-bold text-navy text-center bg-transparent border-0 border-b border-dashed border-rose/30 focus:border-rose focus:outline-none py-1 mt-1"
+              value={newActivityName}
+              onChange={(e) => setLocalData({ ...localData, newActivityName: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && addActivity()}
+              placeholder="e.g. Running, Yoga, Weight Training..."
+              className="flex-1 px-4 py-2.5 bg-canvas border border-border-soft rounded-xl text-sm focus:outline-none focus:border-rose"
             />
-
-            <input
-              type="date"
-              value={countdownDate}
-              onChange={(e) => setLocalData({ ...localData, countdownDate: e.target.value })}
-              className="text-xs text-[#6E6A62] mt-1.5 text-center bg-transparent border-0 focus:outline-none"
-            />
-
-            <div className="mt-4">
-              <span className="text-4xl font-serif font-extrabold text-rose">{daysLeft}</span>
-              <span className="text-xs font-mono text-[#A19D94] block uppercase tracking-wider mt-0.5">Days remaining</span>
-            </div>
+            <button
+              onClick={addActivity}
+              className="px-5 py-2.5 bg-sage-bg hover:bg-sage text-white rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add
+            </button>
           </div>
         </div>
 
-        <div>
-          <button
-            onClick={() => triggerSave(localData)}
-            className="px-6 py-2.5 bg-sage-bg hover:bg-sage text-white rounded-full text-xs font-bold cursor-pointer transition-colors"
-          >
-            {isSaved ? 'Vitality Saved ✓' : 'Save Health Focus'}
-          </button>
-        </div>
+        {/* Dynamic Activity Cards — one per activity the user has added, none hardcoded */}
+        {activities.length === 0 ? (
+          <div className="text-center py-10 text-[#A19D94] text-sm italic">
+            No activities yet — add your first one above to start tracking.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {activities.map((activity: any) => {
+              const weekLog = activity.log.filter((l: any) => {
+                const logDate = new Date(l.date);
+                const now = new Date();
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                return logDate >= weekAgo;
+              });
+              const consistencyPct = activity.targetDays.length > 0
+                ? Math.min(100, Math.round((weekLog.length / activity.targetDays.length) * 100))
+                : 0;
+
+              return (
+                <div key={activity.id} className="bg-white border border-border-soft rounded-[28px] shadow-soft p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-sm font-serif font-bold text-navy">{activity.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-[#A19D94]">{consistencyPct}%</span>
+                      <button onClick={() => removeActivity(activity.id)} className="text-[#A19D94] hover:text-rose cursor-pointer">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <label className="block text-[10px] font-mono uppercase text-[#6E6A62] mb-1.5">Weekly Target Days</label>
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {daysOfWeek.map(day => (
+                      <button
+                        key={day}
+                        onClick={() => toggleTargetDay(activity.id, day)}
+                        className={`px-2 py-1 rounded-full text-[9px] font-bold cursor-pointer transition-colors ${
+                          activity.targetDays.includes(day)
+                            ? 'bg-rose-bg text-white'
+                            : 'bg-canvas text-[#A19D94] border border-border-soft'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => logActivity(activity.id)}
+                    className="w-full px-4 py-2 bg-sage-bg hover:bg-sage text-white rounded-full text-[10px] font-bold cursor-pointer transition-colors mb-3"
+                  >
+                    + Log Today
+                  </button>
+
+                  <div className="space-y-1.5 max-h-28 overflow-y-auto">
+                    {activity.log.slice(0, 6).map((entry: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center text-[10px] text-[#6E6A62] bg-canvas px-2.5 py-1.5 rounded-lg">
+                        <span>{entry.date}</span>
+                        <button onClick={() => deleteLogEntry(activity.id, idx)} className="text-[#A19D94] hover:text-rose cursor-pointer">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
