@@ -7,14 +7,14 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
   try {
-    // 1. Authenticate session & authorize admin (aliahhemby@gmail.com)
+    // 1. Authenticate session & authorize admin (set via ADMIN_EMAIL env var)
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const email = session.user.email?.toLowerCase();
-    if (email !== 'aliahhemby@gmail.com') {
+    if (email !== (process.env.ADMIN_EMAIL || 'hembypointadvisory@gmail.com').toLowerCase()) {
       return NextResponse.json({ error: 'Access Denied: Admin account only' }, { status: 403 });
     }
 

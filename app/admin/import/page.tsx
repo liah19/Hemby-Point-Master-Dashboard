@@ -102,7 +102,7 @@ Habits I'm letting go of: Reading on screen before bed, afternoon sugar`;
   }
 
   // 3. Authenticated but not Liah
-  const isAdmin = session?.user?.email?.toLowerCase() === 'aliahhemby@gmail.com';
+  const isAdmin = session?.user?.email?.toLowerCase() === (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'hembypointadvisory@gmail.com').toLowerCase();
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-canvas flex flex-col items-center justify-center px-4 relative overflow-hidden">

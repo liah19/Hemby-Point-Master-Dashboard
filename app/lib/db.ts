@@ -302,3 +302,39 @@ export async function getAllOptedInUsers(): Promise<User[]> {
   const db = readFallbackDb();
   return db.users.filter(u => u.briefing_opt_in === true);
 }
+
+export async function getAllUsers(): Promise<any[]> {
+  await initDb();
+  if (isPostgres && dbPool) {
+    const res = await dbPool.query(`
+      SELECT u.id, u.email, u.name, u.phone, u.briefing_opt_in, u.briefing_time, u.created_at,
+             d.selected_areas, d.updated_at as dashboard_updated_at
+      FROM users u
+      LEFT JOIN user_dashboards d ON d.user_id = u.id
+      ORDER BY u.created_at DESC
+    `);
+    return res.rows;
+  }
+
+  // JSON Fallback
+  const db = readFallbackDb();
+  return db.users.map(u => {
+    const dash = db.user_dashboards.find((d: any) => d.user_id === u.id);
+    return { ...u, selected_areas: dash?.selected_areas || [], dashboard_updated_at: dash?.updated_at };
+  });
+}
+
+export async function deleteUser(userId: number): Promise<void> {
+  await initDb();
+  if (isPostgres && dbPool) {
+    await dbPool.query('DELETE FROM user_dashboards WHERE user_id = $1', [userId]);
+    await dbPool.query('DELETE FROM users WHERE id = $1', [userId]);
+    return;
+  }
+
+  // JSON Fallback
+  const db = readFallbackDb();
+  db.users = db.users.filter(u => u.id !== userId);
+  db.user_dashboards = db.user_dashboards.filter((d: any) => d.user_id !== userId);
+  writeFallbackDb(db);
+}

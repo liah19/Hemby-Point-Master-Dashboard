@@ -258,14 +258,14 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-4">
-          {session?.user?.email?.toLowerCase() === 'aliahhemby@gmail.com' && (
+          {session?.user?.email?.toLowerCase() === (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'hembypointadvisory@gmail.com').toLowerCase() && (
             <button
-              onClick={() => router.push('/admin/import')}
+              onClick={() => router.push('/admin/users')}
               className="flex items-center gap-1.5 px-3 py-2 bg-gold-bg/15 hover:bg-gold-bg/25 border border-gold/30 text-navy rounded-full text-xs font-mono uppercase tracking-wider cursor-pointer transition-all"
               title="Admin Portal"
             >
               <Sparkles className="h-4 w-4 text-gold" />
-              <span className="hidden sm:inline">Admin Seeder</span>
+              <span className="hidden sm:inline">Admin</span>
             </button>
           )}
 
