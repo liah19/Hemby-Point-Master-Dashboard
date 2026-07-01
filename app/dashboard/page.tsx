@@ -52,7 +52,7 @@ export default function Dashboard() {
       if (!data.dashboard || data.dashboard.selected_areas.length === 0) {
         // No dashboard selections -> redirect to onboarding!
         router.push('/onboarding');
-        return;
+        return; // isLoading intentionally stays true — we're navigating away
       }
 
       setUser(data.user);
@@ -63,9 +63,9 @@ export default function Dashboard() {
       setPhone(data.user.phone || '');
       setBriefingOptIn(!!data.user.briefing_opt_in);
       setBriefingTime(data.user.briefing_time || '07:00');
+      setIsLoading(false);
     } catch (err) {
       console.error('Error fetching dashboard:', err);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -235,7 +235,7 @@ export default function Dashboard() {
     }
   };
 
-  if (status === 'loading' || isLoading) {
+  if (status === 'loading' || isLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas">
         <div className="text-center">
