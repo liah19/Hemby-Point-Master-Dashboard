@@ -1,9 +1,4 @@
 import { Pool } from 'pg';
-import fs from 'fs';
-import path from 'path';
-
-// Local file fallback path
-const FALLBACK_DB_PATH = path.join(process.cwd(), 'db_fallback.json');
 
 // Interface definitions
 export interface User {
@@ -48,28 +43,18 @@ if (dbUrl && dbUrl !== 'postgresql://user:password@host/dbname?sslmode=require')
   isPostgres = false;
 }
 
-// Helpers for JSON Fallback Database
+// Helpers for JSON Fallback Database — DISABLED on Vercel (read-only filesystem).
+// These now throw a clear error instead of silently failing with EROFS.
 function readFallbackDb(): { users: any[]; user_dashboards: any[] } {
-  if (!fs.existsSync(FALLBACK_DB_PATH)) {
-    const initial = { users: [], user_dashboards: [] };
-    fs.writeFileSync(FALLBACK_DB_PATH, JSON.stringify(initial, null, 2));
-    return initial;
-  }
-  try {
-    const data = fs.readFileSync(FALLBACK_DB_PATH, 'utf8');
-    return JSON.parse(data || '{"users":[],"user_dashboards":[]}');
-  } catch (err) {
-    console.error('[DATABASE] Error reading fallback JSON database:', err);
-    return { users: [], user_dashboards: [] };
-  }
+  throw new Error(
+    'Database is not connected. DATABASE_URL is missing or invalid — check your Vercel environment variables and make sure it matches your real Neon connection string.'
+  );
 }
 
-function writeFallbackDb(data: { users: any[]; user_dashboards: any[] }) {
-  try {
-    fs.writeFileSync(FALLBACK_DB_PATH, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.error('[DATABASE] Error writing fallback JSON database:', err);
-  }
+function writeFallbackDb(_data: { users: any[]; user_dashboards: any[] }) {
+  throw new Error(
+    'Database is not connected. DATABASE_URL is missing or invalid — check your Vercel environment variables and make sure it matches your real Neon connection string.'
+  );
 }
 
 // Initialize database schema (runs at startup or when client is first used)
@@ -109,10 +94,8 @@ export async function initDb() {
     }
   }
 
-  // Double check JSON fallback is initialized
   if (!isPostgres) {
-    readFallbackDb();
-    console.log('[DATABASE] Fallback JSON database initialized at:', FALLBACK_DB_PATH);
+    console.error('[DATABASE] Running without a valid Postgres connection. Signups and data will fail until DATABASE_URL is set correctly.');
   }
 }
 
