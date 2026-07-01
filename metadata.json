@@ -1,0 +1,6 @@
+{
+  "name": "Hemby Point Sanctuary",
+  "description": "A multi-user SaaS personal life dashboard with custom life areas, dynamic tabs, Google Calendar integration, and personalized morning text briefings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
