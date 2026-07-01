@@ -19,6 +19,33 @@ declare global {
   }
 }
 
+// Group the 18+ possible life areas into a small, sane set of tabs —
+// matching the feel of a real personal dashboard instead of a long flat list.
+const AREA_GROUPS: Record<string, string[]> = {
+  'Faith': ['Faith / Spirituality'],
+  'Wellness': ['Fitness & Health', 'Sleep & Recovery', 'Nutrition & Diet', 'Mental health', "Habits I'm breaking"],
+  'Business & Career': ['Business / Side hustle', 'Career / Job', 'Certifications / Learning', 'Creativity / Projects'],
+  'Life': ['Finances', 'Relationships', 'Moving / Housing', 'Education / School', 'Travel', 'Social life', 'Family'],
+  'Pets': ['Pets'],
+};
+
+function getGroupedTabs(selectedAreas: string[]): { group: string; areas: string[] }[] {
+  const groups: { group: string; areas: string[] }[] = [];
+  for (const [groupName, groupAreas] of Object.entries(AREA_GROUPS)) {
+    const matched = selectedAreas.filter(a => groupAreas.includes(a));
+    if (matched.length > 0) {
+      groups.push({ group: groupName, areas: matched });
+    }
+  }
+  // Catch any selected area that wasn't mapped to a group (safety net)
+  const allMapped = Object.values(AREA_GROUPS).flat();
+  const unmapped = selectedAreas.filter(a => !allMapped.includes(a));
+  if (unmapped.length > 0) {
+    groups.push({ group: 'More', areas: unmapped });
+  }
+  return groups;
+}
+
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -304,13 +331,13 @@ export default function Dashboard() {
             Daily Focus
           </button>
 
-          {/* User selected Life Areas */}
-          {selectedAreas.map((area) => {
-            const active = activeTab === area;
+          {/* Grouped Life Areas — consolidated from raw selections */}
+          {getGroupedTabs(selectedAreas).map(({ group }) => {
+            const active = activeTab === group;
             return (
               <button
-                key={area}
-                onClick={() => setActiveTab(area)}
+                key={group}
+                onClick={() => setActiveTab(group)}
                 className={`px-5 py-3 rounded-full text-xs font-bold cursor-pointer transition-all flex items-center gap-2.5 ${
                   active
                     ? 'bg-sage-bg text-white shadow-soft font-bold'
@@ -318,7 +345,7 @@ export default function Dashboard() {
                 }`}
               >
                 <ChevronRight className={`h-3 w-3 transition-transform ${active ? 'rotate-90' : ''}`} />
-                {area}
+                {group}
               </button>
             );
           })}
@@ -357,11 +384,22 @@ export default function Dashboard() {
                   onConnectCalendar={handleConnectCalendar}
                 />
               ) : (
-                <AreaWidget
-                  areaName={activeTab}
-                  data={dashboardData[activeTab]}
-                  onUpdate={(updatedData) => handleUpdateAreaWidget(activeTab, updatedData)}
-                />
+                <div className="space-y-8">
+                  {(getGroupedTabs(selectedAreas).find(g => g.group === activeTab)?.areas || []).map((areaName, idx) => (
+                    <div key={areaName}>
+                      {(getGroupedTabs(selectedAreas).find(g => g.group === activeTab)?.areas.length || 0) > 1 && (
+                        <h3 className="text-sm font-mono uppercase tracking-widest text-navy/40 mb-3 px-1">
+                          {areaName}
+                        </h3>
+                      )}
+                      <AreaWidget
+                        areaName={areaName}
+                        data={dashboardData[areaName]}
+                        onUpdate={(updatedData) => handleUpdateAreaWidget(areaName, updatedData)}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
             </motion.div>
           </AnimatePresence>
